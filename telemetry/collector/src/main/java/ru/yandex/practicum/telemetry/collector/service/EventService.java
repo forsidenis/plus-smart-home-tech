@@ -34,14 +34,16 @@ public class EventService {
         SensorEventAvro avroEvent = sensorEventMapper.toAvro(event);
         byte[] serialized = avroSerializer.serialize(avroEvent);
 
-        kafkaTemplate.send(sensorsTopic, avroEvent.getId(), serialized)
+        kafkaTemplate.send(sensorsTopic, event.getHubId(), serialized)
                 .whenComplete((result, ex) -> {
                     if (ex != null) {
                         log.error("Failed to send sensor event", ex);
                     } else {
-                        log.info("Sensor event sent: id={}", avroEvent.getId());
+                        log.info("Sensor event sent: hubId={}, sensorId={}",
+                                event.getHubId(), avroEvent.getId());
                     }
                 });
+        kafkaTemplate.flush();
     }
 
     public void processHubEvent(HubEventDto event) {
@@ -49,13 +51,14 @@ public class EventService {
         HubEventAvro avroEvent = hubEventMapper.toAvro(event);
         byte[] serialized = avroSerializer.serialize(avroEvent);
 
-        kafkaTemplate.send(hubsTopic, avroEvent.getHubId(), serialized)
+        kafkaTemplate.send(hubsTopic, event.getHubId(), serialized)
                 .whenComplete((result, ex) -> {
                     if (ex != null) {
                         log.error("Failed to send hub event", ex);
                     } else {
-                        log.info("Hub event sent: hubId={}", avroEvent.getHubId());
+                        log.info("Hub event sent: hubId={}", event.getHubId());
                     }
                 });
+        kafkaTemplate.flush();
     }
 }

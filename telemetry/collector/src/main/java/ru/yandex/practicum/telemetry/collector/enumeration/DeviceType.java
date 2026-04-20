@@ -1,6 +1,6 @@
-package ru.yandex.practicum.telemetry.collector.dto.hub;
+package ru.yandex.practicum.telemetry.collector.enumeration;
 
-public enum DeviceTypeDto {
+public enum DeviceType {
     MOTION_SENSOR,
     TEMPERATURE_SENSOR,
     LIGHT_SENSOR,

@@ -7,6 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import ru.yandex.practicum.telemetry.collector.enumeration.SensorEventType;
+
 import java.time.Instant;
 
 @JsonTypeInfo(
@@ -22,12 +24,17 @@ import java.time.Instant;
         @JsonSubTypes.Type(value = SwitchSensorEventDto.class, name = "SWITCH_SENSOR_EVENT"),
         @JsonSubTypes.Type(value = TemperatureSensorEventDto.class, name = "TEMPERATURE_SENSOR_EVENT")
 })
-@Getter @Setter @ToString
+@Getter
+@Setter
+@ToString
 public abstract class SensorEventDto {
+
     @NotBlank
     private String id;
+
     @NotBlank
     private String hubId;
+
     private Instant timestamp = Instant.now();
 
     @NotNull

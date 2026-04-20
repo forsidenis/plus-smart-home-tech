@@ -4,7 +4,6 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.kafka.telemetry.event.*;
 import ru.yandex.practicum.telemetry.collector.dto.sensor.*;
 
-
 @Component
 public class SensorEventMapper {
 
@@ -13,7 +12,6 @@ public class SensorEventMapper {
                 .setId(event.getId())
                 .setHubId(event.getHubId())
                 .setTimestamp(event.getTimestamp());
-        ;
 
         Object payload = switch (event.getType()) {
             case CLIMATE_SENSOR_EVENT -> mapClimateSensor((ClimateSensorEventDto) event);

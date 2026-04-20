@@ -3,6 +3,7 @@ package ru.yandex.practicum.telemetry.collector.mapper;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.kafka.telemetry.event.*;
 import ru.yandex.practicum.telemetry.collector.dto.hub.*;
+import ru.yandex.practicum.telemetry.collector.enumeration.*;
 
 import java.util.stream.Collectors;
 
@@ -13,7 +14,6 @@ public class HubEventMapper {
         HubEventAvro.Builder builder = HubEventAvro.newBuilder()
                 .setHubId(event.getHubId())
                 .setTimestamp(event.getTimestamp());
-        ;
 
         Object payload = switch (event.getType()) {
             case DEVICE_ADDED -> mapDeviceAdded((DeviceAddedEventDto) event);
@@ -57,7 +57,7 @@ public class HubEventMapper {
                 .build();
     }
 
-    private DeviceTypeAvro mapDeviceType(DeviceTypeDto type) {
+    private DeviceTypeAvro mapDeviceType(DeviceType type) {
         return switch (type) {
             case MOTION_SENSOR -> DeviceTypeAvro.MOTION_SENSOR;
             case TEMPERATURE_SENSOR -> DeviceTypeAvro.TEMPERATURE_SENSOR;
@@ -78,7 +78,7 @@ public class HubEventMapper {
         return builder.build();
     }
 
-    private ConditionTypeAvro mapConditionType(ConditionTypeDto type) {
+    private ConditionTypeAvro mapConditionType(ConditionType type) {
         return switch (type) {
             case MOTION -> ConditionTypeAvro.MOTION;
             case LUMINOSITY -> ConditionTypeAvro.LUMINOSITY;
@@ -89,7 +89,7 @@ public class HubEventMapper {
         };
     }
 
-    private ConditionOperationAvro mapConditionOperation(ConditionOperationDto op) {
+    private ConditionOperationAvro mapConditionOperation(ConditionOperation op) {
         return switch (op) {
             case EQUALS -> ConditionOperationAvro.EQUALS;
             case GREATER_THAN -> ConditionOperationAvro.GREATER_THAN;
@@ -107,7 +107,7 @@ public class HubEventMapper {
         return builder.build();
     }
 
-    private ActionTypeAvro mapActionType(ActionTypeDto type) {
+    private ActionTypeAvro mapActionType(ActionType type) {
         return switch (type) {
             case ACTIVATE -> ActionTypeAvro.ACTIVATE;
             case DEACTIVATE -> ActionTypeAvro.DEACTIVATE;
