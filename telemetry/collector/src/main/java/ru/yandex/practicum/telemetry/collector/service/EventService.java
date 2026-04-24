@@ -5,12 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.grpc.telemetry.event.*;
 import ru.yandex.practicum.kafka.telemetry.event.HubEventAvro;
 import ru.yandex.practicum.kafka.telemetry.event.SensorEventAvro;
-import ru.yandex.practicum.telemetry.collector.dto.hub.HubEventDto;
-import ru.yandex.practicum.telemetry.collector.dto.sensor.SensorEventDto;
-import ru.yandex.practicum.telemetry.collector.mapper.HubEventMapper;
-import ru.yandex.practicum.telemetry.collector.mapper.SensorEventMapper;
+import ru.yandex.practicum.telemetry.collector.mapper.SensorEventProtoMapper;
+import ru.yandex.practicum.telemetry.collector.mapper.HubEventProtoMapper;
 import ru.yandex.practicum.telemetry.collector.util.AvroSerializer;
 
 @Slf4j
@@ -19,8 +18,8 @@ import ru.yandex.practicum.telemetry.collector.util.AvroSerializer;
 public class EventService {
 
     private final KafkaTemplate<String, byte[]> kafkaTemplate;
-    private final SensorEventMapper sensorEventMapper;
-    private final HubEventMapper hubEventMapper;
+    private final SensorEventProtoMapper sensorEventProtoMapper;
+    private final HubEventProtoMapper hubEventProtoMapper;
     private final AvroSerializer avroSerializer;
 
     @Value("${collector.kafka.topics.sensors}")
@@ -29,9 +28,9 @@ public class EventService {
     @Value("${collector.kafka.topics.hubs}")
     private String hubsTopic;
 
-    public void processSensorEvent(SensorEventDto event) {
+    public void processSensorEvent(SensorEventProto event) {
         log.debug("Processing sensor event: {}", event);
-        SensorEventAvro avroEvent = sensorEventMapper.toAvro(event);
+        SensorEventAvro avroEvent = sensorEventProtoMapper.toAvro(event);
         byte[] serialized = avroSerializer.serialize(avroEvent);
 
         kafkaTemplate.send(sensorsTopic, event.getHubId(), serialized)
@@ -46,9 +45,9 @@ public class EventService {
         kafkaTemplate.flush();
     }
 
-    public void processHubEvent(HubEventDto event) {
+    public void processHubEvent(HubEventProto event) {
         log.debug("Processing hub event: {}", event);
-        HubEventAvro avroEvent = hubEventMapper.toAvro(event);
+        HubEventAvro avroEvent = hubEventProtoMapper.toAvro(event);
         byte[] serialized = avroSerializer.serialize(avroEvent);
 
         kafkaTemplate.send(hubsTopic, event.getHubId(), serialized)
