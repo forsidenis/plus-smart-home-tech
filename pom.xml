@@ -7,7 +7,7 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.3.2</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <relativePath/>
     </parent>
 
     <groupId>ru.yandex.practicum</groupId>
@@ -30,12 +30,20 @@
         <grpc-spring-boot-starter.version>3.1.0.RELEASE</grpc-spring-boot-starter.version>
         <protobuf.version>3.23.4</protobuf.version>
         <grpc.version>1.63.0</grpc.version>
+        <kafka-avro-serializer.version>7.4.3</kafka-avro-serializer.version>
 
-        <!--       Plugins       -->
+        <!-- Plugins -->
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
         <avro-maven-plugin.version>${avro.version}</avro-maven-plugin.version>
         <protobuf-plugin.version>2.4.0</protobuf-plugin.version>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>confluent</id>
+            <url>https://packages.confluent.io/maven/</url>
+        </repository>
+    </repositories>
 
     <dependencyManagement>
         <dependencies>
@@ -52,12 +60,18 @@
             </dependency>
 
             <dependency>
+                <groupId>io.confluent</groupId>
+                <artifactId>kafka-avro-serializer</artifactId>
+                <version>${kafka-avro-serializer.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
                 <version>${springdoc-openapi-starter.version}</version>
             </dependency>
 
-            <!--    GRPC dependencies management        -->
+            <!-- gRPC dependencies management -->
             <dependency>
                 <groupId>net.devh</groupId>
                 <artifactId>grpc-spring-boot-starter</artifactId>
@@ -81,8 +95,6 @@
                 <artifactId>grpc-protobuf</artifactId>
                 <version>${grpc.version}</version>
             </dependency>
-
-            <!--    / GRPC dependencies management        -->
         </dependencies>
     </dependencyManagement>
 
@@ -97,7 +109,7 @@
                 <plugin>
                     <groupId>org.apache.avro</groupId>
                     <artifactId>avro-maven-plugin</artifactId>
-                    <version>${avro-maven-plugin.version}</version>
+                    <version>${avro.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>io.github.ascopes</groupId>
