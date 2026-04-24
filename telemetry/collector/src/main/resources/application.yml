@@ -8,6 +8,10 @@ collector:
       sensors: telemetry.sensors.v1
       hubs: telemetry.hubs.v1
 
+grpc:
+  server:
+    port: 59091
+
 logging:
   level:
     ru.yandex.practicum.telemetry.collector: DEBUG
