@@ -28,18 +28,24 @@ public class SnapshotService {
                     .build();
             updateSnapshot(snapshot, event);
             snapshots.put(hubId, snapshot);
+            log.debug("Created new snapshot for hub {}", hubId);
             return Optional.of(snapshot);
         }
 
         SensorStateAvro oldState = snapshot.getSensorsState().get(sensorId);
         if (oldState != null) {
-            if (!event.getTimestamp().isAfter(oldState.getTimestamp()) ||
-                    payloadEquals(oldState.getData(), event.getPayload())) {
+            if (event.getTimestamp().isBefore(oldState.getTimestamp())) {
+                log.debug("Ignoring older event for sensor {} (hub {})", sensorId, hubId);
+                return Optional.empty();
+            }
+            if (payloadEquals(oldState.getData(), event.getPayload())) {
+                log.debug("Data unchanged for sensor {} (hub {})", sensorId, hubId);
                 return Optional.empty();
             }
         }
 
         updateSnapshot(snapshot, event);
+        log.debug("Updated snapshot for hub {} with sensor {}", hubId, sensorId);
         return Optional.of(snapshot);
     }
 
