@@ -36,7 +36,7 @@ services:
 
   analyzer-db:
     image: postgres:16.1
-    container_name: analyzer
+    container_name: analyzer-db
     volumes:
       - ./telemetry/analyzer/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
     ports:
@@ -45,8 +45,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB_ANALYZER}
       - POSTGRES_USER=${POSTGRES_USER_ANALYZER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_ANALYZER}
-      - POSTGRES_HOST_AUTH_METHOD=trust
-      - POSTGRES_INITDB_ARGS=--auth-host=trust --auth-local=trust
+      - POSTGRES_HOST_AUTH_METHOD=md5
     healthcheck:
       test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
       timeout: 5s
