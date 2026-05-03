@@ -19,7 +19,7 @@
         <module>telemetry</module>
         <module>infra</module>
         <module>commerce</module>
-        <module>analyzer</module>
+
     </modules>
 
     <properties>
