@@ -33,3 +33,21 @@ services:
                              --partitions 1 --replication-factor 1 --if-not-exists \
                              --bootstrap-server kafka:29092'"
     init: true
+
+  db:
+    image: postgres:16-alpine
+    container_name: smart-home-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: analyzer
+      POSTGRES_USER: analyzer
+      POSTGRES_PASSWORD: analyzer
+      POSTGRES_HOST_AUTH_METHOD: trust
+    restart: unless-stopped
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    #  - ./analyzer/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+
+volumes:
+  pgdata:
