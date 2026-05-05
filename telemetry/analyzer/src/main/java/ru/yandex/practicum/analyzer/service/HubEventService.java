@@ -90,9 +90,14 @@ public class HubEventService {
         }
 
         for (DeviceActionAvro actionAvro : event.getActions()) {
+            Integer actionValue = actionAvro.getValue();
+            if (actionValue == null) {
+                actionValue = 0;
+            }
+
             Action action = Action.builder()
                     .type(actionAvro.getType().name())
-                    .value(actionAvro.getValue())
+                    .value(actionValue)
                     .build();
             action = actionRepository.save(action);
 
