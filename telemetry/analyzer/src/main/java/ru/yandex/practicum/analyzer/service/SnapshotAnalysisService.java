@@ -111,9 +111,13 @@ public class SnapshotAnalysisService {
                     .setTimestamp(toProtoTimestamp(snapshot.getTimestamp()))
                     .build();
 
-            log.info("=== Sending action to HubRouter: {}", request);
-            hubRouterClient.handleDeviceAction(request);
-            log.info("Sent action {} for hub {}", action.getType(), snapshot.getHubId());
+            try {
+                log.info("=== Sending action to HubRouter: {}", request);
+                hubRouterClient.handleDeviceAction(request);
+                log.info("Sent action {} for hub {}", action.getType(), snapshot.getHubId());
+            } catch (Exception e) {
+                log.error("Failed to send action to HubRouter for scenario '{}'", scenario.getName(), e);
+            }
         }
     }
 

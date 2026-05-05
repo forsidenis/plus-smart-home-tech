@@ -1,15 +1,22 @@
 spring:
   datasource:
-    url: jdbc:postgresql://127.0.0.1:5432/postgres?sslmode=disable
+    url: jdbc:postgresql://localhost:5432/postgres?sslmode=disable
     username: postgres
     password: password
     driver-class-name: org.postgresql.Driver
+    hikari:
+      initialization-fail-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: create-drop
     properties:
       hibernate:
-        format_sql: false
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        boot:
+          allow_jdbc_metadata_access: false
+  sql:
+    init:
+      mode: never
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration
@@ -28,10 +35,6 @@ grpc:
 
 logging:
   level:
-    com.zaxxer.hikari: DEBUG
-    org.springframework.jdbc: DEBUG
-    org.hibernate.engine.jdbc: DEBUG
-    org.postgresql: DEBUG
     #    io.grpc: DEBUG
     #    net.devh.boot.grpc: DEBUG
     ru:

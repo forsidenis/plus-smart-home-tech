@@ -57,18 +57,21 @@ public class HubEventService {
         scenario = scenarioRepository.save(scenario);
 
         for (ScenarioConditionAvro condAvro : event.getConditions()) {
+            int conditionValue;
             Object rawValue = condAvro.getValue();
-            Integer value = null;
             if (rawValue instanceof Boolean) {
-                value = ((Boolean) rawValue) ? 1 : 0;
+                conditionValue = (Boolean) rawValue ? 1 : 0;
             } else if (rawValue instanceof Integer) {
-                value = (Integer) rawValue;
+                conditionValue = (Integer) rawValue;
+            } else {
+                log.warn("Unexpected condition value type: {}", rawValue.getClass());
+                conditionValue = 0;
             }
 
             Condition condition = Condition.builder()
                     .type(condAvro.getType().name())
                     .operation(condAvro.getOperation().name())
-                    .value(value)
+                    .value(conditionValue)
                     .build();
             condition = conditionRepository.save(condition);
 

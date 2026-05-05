@@ -42,13 +42,19 @@ public class SnapshotProcessor {
                 for (ConsumerRecord<String, SensorsSnapshotAvro> record : records) {
                     SensorsSnapshotAvro snapshot = record.value();
                     if (snapshot != null) {
-                        analysisService.processSnapshot(snapshot);
+                        try {
+                            analysisService.processSnapshot(snapshot);
+                        } catch (Exception e) {
+                            log.error("Failed to process snapshot for hub {}", snapshot.getHubId(), e);
+                        }
                     }
                 }
                 consumer.commitSync();
             }
         } catch (WakeupException e) {
             log.info("SnapshotProcessor woken up");
+        } catch (Exception e) {
+            log.error("Unexpected error in snapshot processing loop", e);
         } finally {
             log.info("SnapshotProcessor stopped");
             consumer.close();
@@ -57,5 +63,8 @@ public class SnapshotProcessor {
 
     public void stop() {
         running = false;
+        if (consumer != null) {
+            consumer.wakeup();
+        }
     }
 }
