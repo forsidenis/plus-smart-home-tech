@@ -14,6 +14,10 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   autoconfigure:
@@ -22,9 +26,7 @@ spring:
       - org.springframework.boot.autoconfigure.r2dbc.R2dbcTransactionManagerAutoConfiguration
 
 grpc:
-  server:
-    port: 59091
-    reflection-service-enabled: true
+  # gRPC-сервер анализатору не нужен (только клиент), поэтому явно не указываем порт
   client:
     hub-router:
       address: 'static://localhost:59090'
@@ -34,7 +36,7 @@ grpc:
 
 logging:
   level:
-    ru.yandex.practicum.telemetry.analyzer: DEBUG
+    ru.yandex.practicum.analyzer: DEBUG
     com.zaxxer.hikari: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level --- [%thread] %logger{36} : %msg%n"

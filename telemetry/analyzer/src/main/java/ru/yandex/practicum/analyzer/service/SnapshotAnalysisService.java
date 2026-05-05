@@ -63,7 +63,14 @@ public class SnapshotAnalysisService {
 
     private int extractValue(Object data, String type) {
         return switch (type) {
-            case "TEMPERATURE" -> ((TemperatureSensorAvro) data).getTemperatureC();
+            case "TEMPERATURE" -> {
+                if (data instanceof TemperatureSensorAvro t) {
+                    yield t.getTemperatureC();
+                } else if (data instanceof ClimateSensorAvro c) {
+                    yield c.getTemperatureC();
+                }
+                throw new IllegalArgumentException("Unsupported data type for TEMPERATURE: " + data.getClass());
+            }
             case "HUMIDITY" -> ((ClimateSensorAvro) data).getHumidity();
             case "CO2LEVEL" -> ((ClimateSensorAvro) data).getCo2Level();
             case "LUMINOSITY" -> ((LightSensorAvro) data).getLuminosity();
