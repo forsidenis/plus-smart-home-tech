@@ -21,8 +21,6 @@ spring:
       - org.springframework.boot.autoconfigure.r2dbc.R2dbcTransactionManagerAutoConfiguration
 
 grpc:
-  server:
-    port: 59091
   client:
     hub-router:
       address: 'static://localhost:59090'
@@ -31,8 +29,6 @@ grpc:
       negotiationType: plaintext
 
 logging:
-  file:
-    name: /tmp/analyzer.log
   level:
     ru.yandex.practicum.analyzer: DEBUG
 

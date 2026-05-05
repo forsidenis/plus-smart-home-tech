@@ -30,18 +30,18 @@ public class SnapshotAnalysisService {
 
     public void processSnapshot(SensorsSnapshotAvro snapshot) {
         String hubId = snapshot.getHubId();
-        log.info("=== Snapshot received for hub {}, sensors: {}", hubId, snapshot.getSensorsState().keySet());
+        System.err.println(">>> [SnapshotAnalysis] processing snapshot for hub " + hubId + ", sensors: " + snapshot.getSensorsState().keySet());
 
         List<Scenario> scenarios = scenarioRepository.findByHubId(hubId);
-        log.info("Found {} scenarios for hub {}", scenarios.size(), hubId);
+        System.err.println(">>> [SnapshotAnalysis] found " + scenarios.size() + " scenarios for hub " + hubId);
 
         for (Scenario scenario : scenarios) {
-            log.debug("Checking scenario '{}'", scenario.getName());
+            System.err.println(">>> [SnapshotAnalysis] checking scenario '" + scenario.getName() + "'");
             if (checkConditions(snapshot, scenario)) {
-                log.info("Conditions met for scenario '{}'. Executing actions.", scenario.getName());
+                System.err.println(">>> [SnapshotAnalysis] conditions MET for scenario '" + scenario.getName() + "'");
                 executeActions(snapshot, scenario);
             } else {
-                log.debug("Conditions NOT met for scenario '{}'", scenario.getName());
+                System.err.println(">>> [SnapshotAnalysis] conditions NOT met for scenario '" + scenario.getName() + "'");
             }
         }
     }
@@ -49,20 +49,20 @@ public class SnapshotAnalysisService {
     private boolean checkConditions(SensorsSnapshotAvro snapshot, Scenario scenario) {
         List<ScenarioCondition> conditions = scenarioConditionRepository.findByScenarioId(scenario.getId());
         if (conditions.isEmpty()) {
-            log.warn("No conditions found for scenario '{}'", scenario.getName());
+            System.err.println(">>> No conditions found for scenario " + scenario.getName());
             return false;
         }
         for (ScenarioCondition sc : conditions) {
             String sensorId = sc.getSensor().getId();
             SensorStateAvro state = snapshot.getSensorsState().get(sensorId);
             if (state == null) {
-                log.debug("Sensor {} not in snapshot, skipping", sensorId);
+                System.err.println(">>> Sensor " + sensorId + " not in snapshot, skipping scenario");
                 return false;
             }
             Condition cond = sc.getCondition();
             Object data = state.getData();
             if (data == null) {
-                log.debug("Sensor {} data is null", sensorId);
+                System.err.println(">>> Sensor " + sensorId + " data is null");
                 return false;
             }
 
@@ -73,8 +73,8 @@ public class SnapshotAnalysisService {
                 case "LOWER_THAN" -> sensorValue < cond.getValue();
                 default -> false;
             };
-            log.debug("Condition: {} {} {} -> {} (sensor {} = {})",
-                    cond.getType(), cond.getOperation(), cond.getValue(), result, sensorId, sensorValue);
+            System.err.println(">>> Condition check: " + cond.getType() + " " + cond.getOperation() + " " + cond.getValue() +
+                    " (actual=" + sensorValue + ") -> " + result);
             if (!result) return false;
         }
         return true;
@@ -101,7 +101,7 @@ public class SnapshotAnalysisService {
 
     private void executeActions(SensorsSnapshotAvro snapshot, Scenario scenario) {
         List<ScenarioAction> actions = scenarioActionRepository.findByScenarioId(scenario.getId());
-        log.info("Executing {} actions for scenario '{}'", actions.size(), scenario.getName());
+        System.err.println(">>> Executing " + actions.size() + " actions for scenario '" + scenario.getName() + "'");
         for (ScenarioAction sa : actions) {
             Action action = sa.getAction();
             DeviceActionRequest request = DeviceActionRequest.newBuilder()
@@ -112,11 +112,12 @@ public class SnapshotAnalysisService {
                     .build();
 
             try {
-                log.info("=== Sending action to HubRouter: {}", request);
+                System.err.println(">>> [gRPC] sending action: " + request);
                 hubRouterClient.handleDeviceAction(request);
-                log.info("Sent action {} for hub {}", action.getType(), snapshot.getHubId());
+                System.err.println(">>> [gRPC] action sent");
             } catch (Exception e) {
-                log.error("Failed to send action to HubRouter for scenario '{}'", scenario.getName(), e);
+                System.err.println("!!! [gRPC] error: " + e.getMessage());
+                e.printStackTrace();
             }
         }
     }

@@ -36,7 +36,7 @@ public class HubEventProcessor implements Runnable {
 
     @Override
     public void run() {
-        System.err.println(">>> HubEventProcessor started, subscribing to: " + TOPICS);
+        System.err.println(">>> [HubEventProcessor] started, subscribing to: " + TOPICS);
         try {
             consumer.subscribe(TOPICS);
             while (running && !Thread.currentThread().isInterrupted()) {
@@ -44,19 +44,21 @@ public class HubEventProcessor implements Runnable {
                 for (ConsumerRecord<String, HubEventAvro> record : records) {
                     HubEventAvro event = record.value();
                     if (event != null) {
-                        System.err.println(">>> HubEventProcessor: received " + event.getPayload().getClass().getSimpleName());
-                        hubEventService.handleHubEvent(event);
+                        try {
+                            System.err.println(">>> [HubEvent] received: " + event.getPayload().getClass().getSimpleName());
+                            hubEventService.handleHubEvent(event);
+                        } catch (Exception e) {
+                            System.err.println("!!! [HubEvent] error: " + e.getMessage());
+                            e.printStackTrace();
+                        }
                     }
                 }
                 consumer.commitAsync();
             }
         } catch (WakeupException e) {
-            log.info("HubEventProcessor woken up");
-        } catch (Exception e) {
-            System.err.println("!!! HubEventProcessor fatal error: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println(">>> [HubEventProcessor] woken up");
         } finally {
-            log.info("HubEventProcessor stopped");
+            System.err.println(">>> [HubEventProcessor] stopped");
             consumer.close();
         }
     }
