@@ -64,7 +64,7 @@ public class HubEventService {
             } else if (rawValue instanceof Integer) {
                 conditionValue = (Integer) rawValue;
             } else {
-                log.warn("Unexpected condition value type: {}", rawValue.getClass());
+                log.warn("Unexpected condition value type: {}", rawValue != null ? rawValue.getClass() : "null");
                 conditionValue = 0;
             }
 
@@ -76,7 +76,8 @@ public class HubEventService {
             condition = conditionRepository.save(condition);
 
             Sensor sensor = sensorRepository.findByIdAndHubId(condAvro.getSensorId(), hubId)
-                    .orElseThrow(() -> new RuntimeException("Sensor not found: " + condAvro.getSensorId()));
+                    .orElseThrow(() -> new RuntimeException(
+                            String.format("Sensor %s not found for hub %s", condAvro.getSensorId(), hubId)));
 
             ScenarioConditionId scId = new ScenarioConditionId(scenario.getId(), sensor.getId(), condition.getId());
             ScenarioCondition sc = ScenarioCondition.builder()
@@ -96,7 +97,8 @@ public class HubEventService {
             action = actionRepository.save(action);
 
             Sensor sensor = sensorRepository.findByIdAndHubId(actionAvro.getSensorId(), hubId)
-                    .orElseThrow(() -> new RuntimeException("Sensor not found: " + actionAvro.getSensorId()));
+                    .orElseThrow(() -> new RuntimeException(
+                            String.format("Sensor %s not found for hub %s", actionAvro.getSensorId(), hubId)));
 
             ScenarioActionId saId = new ScenarioActionId(scenario.getId(), sensor.getId(), action.getId());
             ScenarioAction sa = ScenarioAction.builder()

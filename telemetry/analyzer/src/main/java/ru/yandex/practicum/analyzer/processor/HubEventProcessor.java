@@ -43,7 +43,11 @@ public class HubEventProcessor implements Runnable {
                 for (ConsumerRecord<String, HubEventAvro> record : records) {
                     HubEventAvro event = record.value();
                     if (event != null) {
-                        hubEventService.handleHubEvent(event);
+                        try {
+                            hubEventService.handleHubEvent(event);
+                        } catch (Exception e) {
+                            log.error("Failed to handle hub event from topic {}: {}", TOPICS, event, e);
+                        }
                     }
                 }
                 consumer.commitAsync();
