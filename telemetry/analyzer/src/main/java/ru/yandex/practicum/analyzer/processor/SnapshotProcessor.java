@@ -35,6 +35,7 @@ public class SnapshotProcessor {
     }
 
     public void start() {
+        System.err.println(">>> SnapshotProcessor started, subscribing to: " + TOPICS);
         try {
             consumer.subscribe(TOPICS);
             while (running && !Thread.currentThread().isInterrupted()) {
@@ -42,11 +43,8 @@ public class SnapshotProcessor {
                 for (ConsumerRecord<String, SensorsSnapshotAvro> record : records) {
                     SensorsSnapshotAvro snapshot = record.value();
                     if (snapshot != null) {
-                        try {
-                            analysisService.processSnapshot(snapshot);
-                        } catch (Exception e) {
-                            log.error("Failed to process snapshot for hub {}", snapshot.getHubId(), e);
-                        }
+                        System.err.println(">>> SnapshotProcessor: received snapshot for hub " + snapshot.getHubId());
+                        analysisService.processSnapshot(snapshot);
                     }
                 }
                 consumer.commitSync();
@@ -54,7 +52,8 @@ public class SnapshotProcessor {
         } catch (WakeupException e) {
             log.info("SnapshotProcessor woken up");
         } catch (Exception e) {
-            log.error("Unexpected error in snapshot processing loop", e);
+            System.err.println("!!! SnapshotProcessor fatal error: " + e.getMessage());
+            e.printStackTrace();
         } finally {
             log.info("SnapshotProcessor stopped");
             consumer.close();

@@ -4,8 +4,6 @@ spring:
     username: postgres
     password: password
     driver-class-name: org.postgresql.Driver
-    hikari:
-      initialization-fail-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: create-drop
@@ -25,7 +23,6 @@ spring:
 grpc:
   server:
     port: 59091
-    reflection-service-enabled: true
   client:
     hub-router:
       address: 'static://localhost:59090'
@@ -34,22 +31,13 @@ grpc:
       negotiationType: plaintext
 
 logging:
+  file:
+    name: /tmp/analyzer.log
   level:
-    #    io.grpc: DEBUG
-    #    net.devh.boot.grpc: DEBUG
-    ru:
-      yandex:
-        practicum:
-          telemetry:
-            analyzer:
-              DEBUG
-
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level --- [%thread] %logger{36} : %msg%n"
+    ru.yandex.practicum.analyzer: DEBUG
 
 kafka:
   bootstrap-servers: localhost:9092
-
   consumer:
     auto-offset-reset: earliest
     key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
