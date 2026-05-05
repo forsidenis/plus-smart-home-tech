@@ -90,7 +90,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>ru.yandex.practicum.telemetry.analyzer.Analyzer</mainClass>
+                    <mainClass>ru.yandex.practicum.telemetry.analyzer.AnalyzerApplication</mainClass>
                 </configuration>
                 <executions>
                     <execution>
