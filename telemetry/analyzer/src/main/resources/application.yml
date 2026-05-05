@@ -19,25 +19,30 @@ spring:
       mode: always
       continue-on-error: true
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: localhost:9092
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration
       - org.springframework.boot.autoconfigure.r2dbc.R2dbcTransactionManagerAutoConfiguration
 
 grpc:
-  # gRPC-сервер анализатору не нужен (только клиент), поэтому явно не указываем порт
+  server:
+    enabled: false
   client:
     hub-router:
       address: 'static://localhost:59090'
+      negotiationType: plaintext
       enableKeepAlive: true
       keepAliveWithoutCalls: true
-      negotiationType: plaintext
 
 logging:
   level:
     ru.yandex.practicum.analyzer: DEBUG
     com.zaxxer.hikari: DEBUG
+    net.devh.boot.grpc: DEBUG
+    io.grpc: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level --- [%thread] %logger{36} : %msg%n"
 

@@ -30,24 +30,41 @@ public class SnapshotAnalysisService {
 
     public void processSnapshot(SensorsSnapshotAvro snapshot) {
         String hubId = snapshot.getHubId();
-        log.debug("Analyzing snapshot for hub {}", hubId);
+        log.info("=== Snapshot received for hub {}, sensors: {}", hubId, snapshot.getSensorsState().keySet());
 
         List<Scenario> scenarios = scenarioRepository.findByHubId(hubId);
+        log.info("Found {} scenarios for hub {}", scenarios.size(), hubId);
+
         for (Scenario scenario : scenarios) {
+            log.debug("Checking scenario '{}'", scenario.getName());
             if (checkConditions(snapshot, scenario)) {
+                log.info("Conditions met for scenario '{}'. Executing actions.", scenario.getName());
                 executeActions(snapshot, scenario);
+            } else {
+                log.debug("Conditions NOT met for scenario '{}'", scenario.getName());
             }
         }
     }
 
     private boolean checkConditions(SensorsSnapshotAvro snapshot, Scenario scenario) {
         List<ScenarioCondition> conditions = scenarioConditionRepository.findByScenarioId(scenario.getId());
+        if (conditions.isEmpty()) {
+            log.warn("No conditions found for scenario '{}'", scenario.getName());
+            return false;
+        }
         for (ScenarioCondition sc : conditions) {
             String sensorId = sc.getSensor().getId();
             SensorStateAvro state = snapshot.getSensorsState().get(sensorId);
-            if (state == null) return false;
+            if (state == null) {
+                log.debug("Sensor {} not in snapshot, skipping", sensorId);
+                return false;
+            }
             Condition cond = sc.getCondition();
             Object data = state.getData();
+            if (data == null) {
+                log.debug("Sensor {} data is null", sensorId);
+                return false;
+            }
 
             int sensorValue = extractValue(data, cond.getType());
             boolean result = switch (cond.getOperation()) {
@@ -56,6 +73,8 @@ public class SnapshotAnalysisService {
                 case "LOWER_THAN" -> sensorValue < cond.getValue();
                 default -> false;
             };
+            log.debug("Condition: {} {} {} -> {} (sensor {} = {})",
+                    cond.getType(), cond.getOperation(), cond.getValue(), result, sensorId, sensorValue);
             if (!result) return false;
         }
         return true;
@@ -64,10 +83,10 @@ public class SnapshotAnalysisService {
     private int extractValue(Object data, String type) {
         return switch (type) {
             case "TEMPERATURE" -> {
-                if (data instanceof TemperatureSensorAvro t) {
-                    yield t.getTemperatureC();
-                } else if (data instanceof ClimateSensorAvro c) {
+                if (data instanceof ClimateSensorAvro c) {
                     yield c.getTemperatureC();
+                } else if (data instanceof TemperatureSensorAvro t) {
+                    yield t.getTemperatureC();
                 }
                 throw new IllegalArgumentException("Unsupported data type for TEMPERATURE: " + data.getClass());
             }
@@ -82,6 +101,7 @@ public class SnapshotAnalysisService {
 
     private void executeActions(SensorsSnapshotAvro snapshot, Scenario scenario) {
         List<ScenarioAction> actions = scenarioActionRepository.findByScenarioId(scenario.getId());
+        log.info("Executing {} actions for scenario '{}'", actions.size(), scenario.getName());
         for (ScenarioAction sa : actions) {
             Action action = sa.getAction();
             DeviceActionRequest request = DeviceActionRequest.newBuilder()
@@ -91,6 +111,7 @@ public class SnapshotAnalysisService {
                     .setTimestamp(toProtoTimestamp(snapshot.getTimestamp()))
                     .build();
 
+            log.info("=== Sending action to HubRouter: {}", request);
             hubRouterClient.handleDeviceAction(request);
             log.info("Sent action {} for hub {}", action.getType(), snapshot.getHubId());
         }
