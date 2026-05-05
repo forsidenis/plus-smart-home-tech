@@ -1,35 +1,42 @@
 package ru.yandex.practicum.analyzer.processor;
 
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.ConsumerFactory;
+import org.apache.kafka.common.errors.WakeupException;
 import org.springframework.stereotype.Component;
+import ru.yandex.practicum.analyzer.client.KafkaClientConfigurationImpl;
+import ru.yandex.practicum.analyzer.serialization.SensorsSnapshotDeserializer;
 import ru.yandex.practicum.analyzer.service.SnapshotAnalysisService;
 import ru.yandex.practicum.kafka.telemetry.event.SensorsSnapshotAvro;
 
 import java.time.Duration;
-import java.util.Collections;
+import java.util.List;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class SnapshotProcessor {
 
-    private final ConsumerFactory<String, SensorsSnapshotAvro> consumerFactory;
+    private static final List<String> TOPICS = List.of("telemetry.snapshots.v1");
+    private static final String GROUP_ID = "snapshot-analyzer-group";
+
+    private final KafkaClientConfigurationImpl<SensorsSnapshotAvro> client;
     private final SnapshotAnalysisService analysisService;
-
-    @Value("${analyzer.kafka.topics.snapshots}")
-    private String snapshotsTopic;
-
+    private Consumer<String, SensorsSnapshotAvro> consumer;
     private volatile boolean running = true;
 
+    @PostConstruct
+    public void init() {
+        this.consumer = client.initConsumer(GROUP_ID, SensorsSnapshotDeserializer.class);
+    }
+
     public void start() {
-        try (Consumer<String, SensorsSnapshotAvro> consumer = consumerFactory.createConsumer()) {
-            consumer.subscribe(Collections.singletonList(snapshotsTopic));
+        try {
+            consumer.subscribe(TOPICS);
             while (running && !Thread.currentThread().isInterrupted()) {
                 ConsumerRecords<String, SensorsSnapshotAvro> records = consumer.poll(Duration.ofSeconds(1));
                 for (ConsumerRecord<String, SensorsSnapshotAvro> record : records) {
@@ -40,10 +47,11 @@ public class SnapshotProcessor {
                 }
                 consumer.commitSync();
             }
-        } catch (org.apache.kafka.common.errors.WakeupException e) {
+        } catch (WakeupException e) {
             log.info("SnapshotProcessor woken up");
         } finally {
             log.info("SnapshotProcessor stopped");
+            consumer.close();
         }
     }
 

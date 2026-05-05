@@ -1,25 +1,15 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/analyzer-db
+    url: jdbc:postgresql://127.0.0.1:5432/postgres?sslmode=disable
     username: postgres
-    password: 123456789
+    password: password
     driver-class-name: org.postgresql.Driver
-    hikari:
-      initialization-fail-timeout: 6000
-      connection-timeout: 1000
-      connection-test-query: SELECT 1
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: create-drop
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-  sql:
-    init:
-      mode: always
-      continue-on-error: true
-  kafka:
-    bootstrap-servers: localhost:9092
+        format_sql: false
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration
@@ -27,36 +17,36 @@ spring:
 
 grpc:
   server:
-    enabled: false
+    port: 59091
+    reflection-service-enabled: true
   client:
     hub-router:
       address: 'static://localhost:59090'
-      negotiationType: plaintext
       enableKeepAlive: true
       keepAliveWithoutCalls: true
+      negotiationType: plaintext
 
 logging:
   level:
-    ru.yandex.practicum.analyzer: DEBUG
     com.zaxxer.hikari: DEBUG
-    net.devh.boot.grpc: DEBUG
-    io.grpc: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql: TRACE
+    org.springframework.jdbc: DEBUG
+    org.hibernate.engine.jdbc: DEBUG
+    org.postgresql: DEBUG
+    #    io.grpc: DEBUG
+    #    net.devh.boot.grpc: DEBUG
+    ru:
+      yandex:
+        practicum:
+          telemetry:
+            analyzer:
+              DEBUG
+
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level --- [%thread] %logger{36} : %msg%n"
 
-analyzer:
-  kafka:
-    consumer:
-      hubs:
-        group-id: analyzer.hubs
-        auto-offset-reset: earliest
-        enable-auto-commit: false
-      snapshots:
-        group-id: analyzer.snapshots
-        auto-offset-reset: earliest
-        enable-auto-commit: false
-    topics:
-      hubs: telemetry.hubs.v1
-      snapshots: telemetry.snapshots.v1
+kafka:
+  bootstrap-servers: localhost:9092
+
+  consumer:
+    auto-offset-reset: earliest
+    key-deserializer: org.apache.kafka.common.serialization.StringDeserializer

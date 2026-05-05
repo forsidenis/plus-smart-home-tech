@@ -1,29 +1,29 @@
 -- создаём таблицу scenarios
 CREATE TABLE IF NOT EXISTS scenarios (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    hub_id VARCHAR,
-    name VARCHAR,
+    hub_id VARCHAR(50),
+    name VARCHAR(50),
     UNIQUE(hub_id, name)
 );
 
 -- создаём таблицу sensors
 CREATE TABLE IF NOT EXISTS sensors (
     id VARCHAR PRIMARY KEY,
-    hub_id VARCHAR
+    hub_id VARCHAR(50)
 );
 
 -- создаём таблицу conditions
 CREATE TABLE IF NOT EXISTS conditions (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    type VARCHAR,
-    operation VARCHAR,
+    type VARCHAR(50),
+    operation VARCHAR(50),
     value INTEGER
 );
 
 -- создаём таблицу actions
 CREATE TABLE IF NOT EXISTS actions (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    type VARCHAR,
+    type VARCHAR(50),
     value INTEGER
 );
 

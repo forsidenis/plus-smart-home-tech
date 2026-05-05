@@ -42,10 +42,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_DB=${POSTGRES_DB_ANALYZER}
-      - POSTGRES_USER=${POSTGRES_USER_ANALYZER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_ANALYZER}
-      - POSTGRES_HOST_AUTH_METHOD=md5
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
     healthcheck:
       test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
       timeout: 5s
