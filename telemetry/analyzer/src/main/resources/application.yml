@@ -5,8 +5,8 @@ spring:
     password: 123456789
     driver-class-name: org.postgresql.Driver
     hikari:
-      initialization-fail-timeout: 60000
-      connection-timeout: 10000
+      initialization-fail-timeout: 6000
+      connection-timeout: 1000
       connection-test-query: SELECT 1
   jpa:
     hibernate:
@@ -14,6 +14,8 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration
@@ -34,13 +36,20 @@ logging:
   level:
     ru.yandex.practicum.telemetry.analyzer: DEBUG
     com.zaxxer.hikari: DEBUG
-
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level --- [%thread] %logger{36} : %msg%n"
 
-kafka:
-  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
-
-  consumer:
-    auto-offset-reset: ${KAFKA_CONSUMER_AUTO_OFFSET_RESET}
-    key-deserializer: ${KAFKA_CONSUMER_KEY_DESERIALIZER}
+analyzer:
+  kafka:
+    consumer:
+      hubs:
+        group-id: analyzer.hubs
+        auto-offset-reset: earliest
+        enable-auto-commit: false
+      snapshots:
+        group-id: analyzer.snapshots
+        auto-offset-reset: earliest
+        enable-auto-commit: false
+    topics:
+      hubs: telemetry.hubs.v1
+      snapshots: telemetry.snapshots.v1
