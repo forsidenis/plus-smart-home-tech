@@ -1,7 +1,6 @@
 package ru.yandex.practicum.analyzer.service;
 
 import com.google.protobuf.Timestamp;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
@@ -17,31 +16,38 @@ import java.time.Instant;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class SnapshotAnalysisService {
 
     private final ScenarioRepository scenarioRepository;
     private final ScenarioConditionRepository scenarioConditionRepository;
     private final ScenarioActionRepository scenarioActionRepository;
+    private final HubRouterControllerGrpc.HubRouterControllerBlockingStub hubRouterClient;
 
-    @GrpcClient("hub-router")
-    private HubRouterControllerGrpc.HubRouterControllerBlockingStub hubRouterClient;
+    public SnapshotAnalysisService(ScenarioRepository scenarioRepository,
+                                   ScenarioConditionRepository scenarioConditionRepository,
+                                   ScenarioActionRepository scenarioActionRepository,
+                                   @GrpcClient("hub-router") HubRouterControllerGrpc.HubRouterControllerBlockingStub hubRouterClient) {
+        this.scenarioRepository = scenarioRepository;
+        this.scenarioConditionRepository = scenarioConditionRepository;
+        this.scenarioActionRepository = scenarioActionRepository;
+        this.hubRouterClient = hubRouterClient;
+    }
 
     public void processSnapshot(SensorsSnapshotAvro snapshot) {
         String hubId = snapshot.getHubId();
-        System.err.println(">>> [SnapshotAnalysis] processing snapshot for hub " + hubId + ", sensors: " + snapshot.getSensorsState().keySet());
+        log.info("[SnapshotAnalysis] processing snapshot for hub {}, sensors: {}", hubId, snapshot.getSensorsState().keySet());
 
         List<Scenario> scenarios = scenarioRepository.findByHubId(hubId);
-        System.err.println(">>> [SnapshotAnalysis] found " + scenarios.size() + " scenarios for hub " + hubId);
+        log.debug("[SnapshotAnalysis] found {} scenarios for hub {}", scenarios.size(), hubId);
 
         for (Scenario scenario : scenarios) {
-            System.err.println(">>> [SnapshotAnalysis] checking scenario '" + scenario.getName() + "'");
+            log.debug("[SnapshotAnalysis] checking scenario '{}'", scenario.getName());
             if (checkConditions(snapshot, scenario)) {
-                System.err.println(">>> [SnapshotAnalysis] conditions MET for scenario '" + scenario.getName() + "'");
+                log.info("[SnapshotAnalysis] conditions MET for scenario '{}'", scenario.getName());
                 executeActions(snapshot, scenario);
             } else {
-                System.err.println(">>> [SnapshotAnalysis] conditions NOT met for scenario '" + scenario.getName() + "'");
+                log.debug("[SnapshotAnalysis] conditions NOT met for scenario '{}'", scenario.getName());
             }
         }
     }
@@ -49,20 +55,20 @@ public class SnapshotAnalysisService {
     private boolean checkConditions(SensorsSnapshotAvro snapshot, Scenario scenario) {
         List<ScenarioCondition> conditions = scenarioConditionRepository.findByScenarioId(scenario.getId());
         if (conditions.isEmpty()) {
-            System.err.println(">>> No conditions found for scenario " + scenario.getName());
+            log.debug("No conditions found for scenario {}", scenario.getName());
             return false;
         }
         for (ScenarioCondition sc : conditions) {
             String sensorId = sc.getSensor().getId();
             SensorStateAvro state = snapshot.getSensorsState().get(sensorId);
             if (state == null) {
-                System.err.println(">>> Sensor " + sensorId + " not in snapshot, skipping scenario");
+                log.debug("Sensor {} not in snapshot, skipping scenario", sensorId);
                 return false;
             }
             Condition cond = sc.getCondition();
             Object data = state.getData();
             if (data == null) {
-                System.err.println(">>> Sensor " + sensorId + " data is null");
+                log.debug("Sensor {} data is null", sensorId);
                 return false;
             }
 
@@ -73,8 +79,7 @@ public class SnapshotAnalysisService {
                 case "LOWER_THAN" -> sensorValue < cond.getValue();
                 default -> false;
             };
-            System.err.println(">>> Condition check: " + cond.getType() + " " + cond.getOperation() + " " + cond.getValue() +
-                    " (actual=" + sensorValue + ") -> " + result);
+            log.debug("Condition check: {} {} {} (actual={}) -> {}", cond.getType(), cond.getOperation(), cond.getValue(), sensorValue, result);
             if (!result) return false;
         }
         return true;
@@ -101,7 +106,7 @@ public class SnapshotAnalysisService {
 
     private void executeActions(SensorsSnapshotAvro snapshot, Scenario scenario) {
         List<ScenarioAction> actions = scenarioActionRepository.findByScenarioId(scenario.getId());
-        System.err.println(">>> Executing " + actions.size() + " actions for scenario '" + scenario.getName() + "'");
+        log.info("Executing {} actions for scenario '{}'", actions.size(), scenario.getName());
         for (ScenarioAction sa : actions) {
             Action action = sa.getAction();
             DeviceActionRequest request = DeviceActionRequest.newBuilder()
@@ -112,12 +117,11 @@ public class SnapshotAnalysisService {
                     .build();
 
             try {
-                System.err.println(">>> [gRPC] sending action: " + request);
+                log.debug("[gRPC] sending action: {}", request);
                 hubRouterClient.handleDeviceAction(request);
-                System.err.println(">>> [gRPC] action sent");
+                log.debug("[gRPC] action sent");
             } catch (Exception e) {
-                System.err.println("!!! [gRPC] error: " + e.getMessage());
-                e.printStackTrace();
+                log.error("[gRPC] error: {}", e.getMessage(), e);
             }
         }
     }

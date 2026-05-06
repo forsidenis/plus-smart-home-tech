@@ -42,8 +42,11 @@ public class HubEventService {
     }
 
     private void handleDeviceRemoved(String hubId, DeviceRemovedEventAvro event) {
-        sensorRepository.deleteById(event.getId());
-        log.debug("Removed sensor {} from hub {}", event.getId(), hubId);
+        String sensorId = event.getId();
+        scenarioConditionRepository.deleteBySensorIdAndScenarioHubId(sensorId, hubId);
+        scenarioActionRepository.deleteBySensorIdAndScenarioHubId(sensorId, hubId);
+        sensorRepository.deleteById(sensorId);
+        log.debug("Removed sensor {} from hub {}", sensorId, hubId);
     }
 
     private void handleScenarioAdded(String hubId, ScenarioAddedEventAvro event) {

@@ -8,5 +8,8 @@ import java.util.List;
 
 public interface ScenarioActionRepository extends JpaRepository<ScenarioAction, ScenarioActionId> {
     void deleteByScenarioId(Long scenarioId);
+
     List<ScenarioAction> findByScenarioId(Long scenarioId);
+
+    void deleteBySensorIdAndScenarioHubId(String sensorId, String hubId);
 }

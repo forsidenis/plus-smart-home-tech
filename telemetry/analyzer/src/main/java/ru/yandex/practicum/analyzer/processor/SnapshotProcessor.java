@@ -35,7 +35,7 @@ public class SnapshotProcessor {
     }
 
     public void start() {
-        System.err.println(">>> [SnapshotProcessor] started, subscribing to: " + TOPICS);
+        log.info("[SnapshotProcessor] started, subscribing to: {}", TOPICS);
         try {
             consumer.subscribe(TOPICS);
             while (running && !Thread.currentThread().isInterrupted()) {
@@ -44,20 +44,19 @@ public class SnapshotProcessor {
                     SensorsSnapshotAvro snapshot = record.value();
                     if (snapshot != null) {
                         try {
-                            System.err.println(">>> [SnapshotProcessor] snapshot for hub " + snapshot.getHubId());
+                            log.debug("[SnapshotProcessor] snapshot for hub {}", snapshot.getHubId());
                             analysisService.processSnapshot(snapshot);
                         } catch (Exception e) {
-                            System.err.println("!!! [SnapshotProcessor] error: " + e.getMessage());
-                            e.printStackTrace();
+                            log.error("[SnapshotProcessor] error: {}", e.getMessage(), e);
                         }
                     }
                 }
                 consumer.commitSync();
             }
         } catch (WakeupException e) {
-            System.err.println(">>> [SnapshotProcessor] woken up");
+            log.info("[SnapshotProcessor] woken up");
         } finally {
-            System.err.println(">>> [SnapshotProcessor] stopped");
+            log.info("[SnapshotProcessor] stopped");
             consumer.close();
         }
     }

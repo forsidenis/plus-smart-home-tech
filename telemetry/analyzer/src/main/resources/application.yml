@@ -6,7 +6,7 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: none
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -14,7 +14,7 @@ spring:
           allow_jdbc_metadata_access: false
   sql:
     init:
-      mode: never
+      mode: always
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration
