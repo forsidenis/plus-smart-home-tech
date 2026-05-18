@@ -1,0 +1,134 @@
+package ru.yandex.practicum.analyzer.service;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import ru.yandex.practicum.analyzer.entity.*;
+import ru.yandex.practicum.analyzer.repository.*;
+import ru.yandex.practicum.kafka.telemetry.event.*;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class HubEventService {
+
+    private final SensorRepository sensorRepository;
+    private final ScenarioRepository scenarioRepository;
+    private final ConditionRepository conditionRepository;
+    private final ActionRepository actionRepository;
+    private final ScenarioConditionRepository scenarioConditionRepository;
+    private final ScenarioActionRepository scenarioActionRepository;
+
+    @Transactional
+    public void handleHubEvent(HubEventAvro event) {
+        Object payload = event.getPayload();
+        switch (payload) {
+            case DeviceAddedEventAvro da -> handleDeviceAdded(event.getHubId(), da);
+            case DeviceRemovedEventAvro dr -> handleDeviceRemoved(event.getHubId(), dr);
+            case ScenarioAddedEventAvro sa -> handleScenarioAdded(event.getHubId(), sa);
+            case ScenarioRemovedEventAvro sr -> handleScenarioRemoved(event.getHubId(), sr);
+            default -> log.warn("Unknown hub event type: {}", payload.getClass());
+        }
+    }
+
+    private void handleDeviceAdded(String hubId, DeviceAddedEventAvro event) {
+        Sensor sensor = Sensor.builder()
+                .id(event.getId())
+                .hubId(hubId)
+                .build();
+        sensorRepository.save(sensor);
+        log.debug("Added sensor {} for hub {}", event.getId(), hubId);
+    }
+
+    private void handleDeviceRemoved(String hubId, DeviceRemovedEventAvro event) {
+        String sensorId = event.getId();
+        scenarioConditionRepository.deleteBySensorIdAndScenarioHubId(sensorId, hubId);
+        scenarioActionRepository.deleteBySensorIdAndScenarioHubId(sensorId, hubId);
+        sensorRepository.deleteById(sensorId);
+        log.debug("Removed sensor {} from hub {}", sensorId, hubId);
+    }
+
+    private void handleScenarioAdded(String hubId, ScenarioAddedEventAvro event) {
+        scenarioRepository.findByHubIdAndName(hubId, event.getName())
+                .ifPresent(s -> deleteScenario(s.getId()));
+
+        Scenario scenario = Scenario.builder()
+                .hubId(hubId)
+                .name(event.getName())
+                .build();
+        scenario = scenarioRepository.save(scenario);
+
+        for (ScenarioConditionAvro condAvro : event.getConditions()) {
+            int conditionValue;
+            Object rawValue = condAvro.getValue();
+            if (rawValue instanceof Boolean) {
+                conditionValue = (Boolean) rawValue ? 1 : 0;
+            } else if (rawValue instanceof Integer) {
+                conditionValue = (Integer) rawValue;
+            } else {
+                log.warn("Unexpected condition value type: {}", rawValue != null ? rawValue.getClass() : "null");
+                conditionValue = 0;
+            }
+
+            Condition condition = Condition.builder()
+                    .type(condAvro.getType().name())
+                    .operation(condAvro.getOperation().name())
+                    .value(conditionValue)
+                    .build();
+            condition = conditionRepository.save(condition);
+
+            Sensor sensor = sensorRepository.findByIdAndHubId(condAvro.getSensorId(), hubId)
+                    .orElseThrow(() -> new RuntimeException(
+                            String.format("Sensor %s not found for hub %s", condAvro.getSensorId(), hubId)));
+
+            ScenarioConditionId scId = new ScenarioConditionId(scenario.getId(), sensor.getId(), condition.getId());
+            ScenarioCondition sc = ScenarioCondition.builder()
+                    .id(scId)
+                    .scenario(scenario)
+                    .sensor(sensor)
+                    .condition(condition)
+                    .build();
+            scenarioConditionRepository.save(sc);
+        }
+
+        for (DeviceActionAvro actionAvro : event.getActions()) {
+            Integer actionValue = actionAvro.getValue();
+            if (actionValue == null) {
+                actionValue = 0;
+            }
+
+            Action action = Action.builder()
+                    .type(actionAvro.getType().name())
+                    .value(actionValue)
+                    .build();
+            action = actionRepository.save(action);
+
+            Sensor sensor = sensorRepository.findByIdAndHubId(actionAvro.getSensorId(), hubId)
+                    .orElseThrow(() -> new RuntimeException(
+                            String.format("Sensor %s not found for hub %s", actionAvro.getSensorId(), hubId)));
+
+            ScenarioActionId saId = new ScenarioActionId(scenario.getId(), sensor.getId(), action.getId());
+            ScenarioAction sa = ScenarioAction.builder()
+                    .id(saId)
+                    .scenario(scenario)
+                    .sensor(sensor)
+                    .action(action)
+                    .build();
+            scenarioActionRepository.save(sa);
+        }
+
+        log.debug("Added scenario '{}' for hub {}", event.getName(), hubId);
+    }
+
+    private void handleScenarioRemoved(String hubId, ScenarioRemovedEventAvro event) {
+        scenarioRepository.findByHubIdAndName(hubId, event.getName())
+                .ifPresent(s -> deleteScenario(s.getId()));
+    }
+
+    private void deleteScenario(Long scenarioId) {
+        scenarioConditionRepository.deleteByScenarioId(scenarioId);
+        scenarioActionRepository.deleteByScenarioId(scenarioId);
+        scenarioRepository.deleteById(scenarioId);
+    }
+}
