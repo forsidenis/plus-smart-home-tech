@@ -1,18 +1,11 @@
 spring:
-  kafka:
-    bootstrap-servers: localhost:9092
-
-aggregator:
-  kafka:
-    consumer:
-      group-id: aggregator.sensors
-      auto-offset-reset: earliest
-    topics:
-      sensors: telemetry.sensors.v1
-      snapshots: telemetry.snapshots.v1
-
-logging:
-  level:
-    ru.yandex.practicum.telemetry.aggregator: DEBUG
-    org.springframework.kafka: INFO
-    org.apache.kafka: WARN
+  application:
+    name: aggregator
+  config:
+    import: configserver:http://localhost:8888
+  cloud:
+    config:
+      fail-fast: true
+      retry:
+        useRandomPolicy: true
+        max-interval: 6000
