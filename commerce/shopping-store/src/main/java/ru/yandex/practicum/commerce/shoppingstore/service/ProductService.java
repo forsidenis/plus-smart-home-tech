@@ -24,7 +24,7 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public ProductDto getProduct(UUID productId) {
-        ProductEntity entity = productRepository.findByProductIdAndProductState(productId, ProductState.ACTIVE)
+        ProductEntity entity = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
         return toDto(entity);
     }
@@ -36,7 +36,7 @@ public class ProductService {
                 .description(productDto.getDescription())
                 .imageSrc(productDto.getImageSrc())
                 .quantityState(productDto.getQuantityState() != null ? productDto.getQuantityState() : QuantityState.ENOUGH)
-                .productState(ProductState.ACTIVE)
+                .productState(ProductState.DEACTIVATE)
                 .productCategory(productDto.getProductCategory())
                 .price(productDto.getPrice())
                 .build();

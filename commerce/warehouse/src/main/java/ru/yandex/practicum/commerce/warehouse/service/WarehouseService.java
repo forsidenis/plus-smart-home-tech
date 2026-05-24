@@ -68,14 +68,20 @@ public class WarehouseService {
             Long requestedQty = entry.getValue();
             WarehouseProductEntity product = warehouseRepository.findById(productId)
                     .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
+            log.debug("Checking product {}: requested {}, available {}", productId, requestedQty, product.getQuantity());
             if (product.getQuantity() < requestedQty) {
                 throw new RuntimeException("Not enough quantity for product " + productId);
             }
             totalWeight += product.getWeight() * requestedQty;
+            if (product.getWidth() == null || product.getHeight() == null || product.getDepth() == null) {
+                throw new RuntimeException("Product dimensions are incomplete for product " + productId);
+            }
             double volume = product.getWidth() * product.getHeight() * product.getDepth();
+
             totalVolume += volume * requestedQty;
             if (product.getFragile()) fragile = true;
         }
+
         return BookedProductsDto.builder()
                 .deliveryWeight(totalWeight)
                 .deliveryVolume(totalVolume)
