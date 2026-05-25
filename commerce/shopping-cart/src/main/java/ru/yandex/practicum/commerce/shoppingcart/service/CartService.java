@@ -47,7 +47,7 @@ public class CartService {
         try {
             warehouseClient.checkProductQuantityEnoughForShoppingCart(dto);
         } catch (Exception e) {
-            log.error("Warehouse check failed", e);   // полный stack trace
+            log.error("Warehouse check failed", e);
             throw new RuntimeException("Not enough products in warehouse", e);
         }
         cartRepository.save(cart);
@@ -82,12 +82,13 @@ public class CartService {
             throw new RuntimeException("Product not in cart");
         }
         products.put(productId, newQuantity);
-        // перепроверяем склад
+
         ShoppingCartDto dto = toDto(cart);
         log.info("Cart DTO before warehouse check: {}", dto);
         try {
             warehouseClient.checkProductQuantityEnoughForShoppingCart(dto);
         } catch (Exception e) {
+            log.error("Warehouse check failed", e);
             throw new RuntimeException("Not enough products in warehouse", e);
         }
         cartRepository.save(cart);

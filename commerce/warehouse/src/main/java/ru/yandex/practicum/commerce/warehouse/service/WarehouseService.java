@@ -60,6 +60,8 @@ public class WarehouseService {
 
     @Transactional(readOnly = true)
     public BookedProductsDto checkProductQuantityEnoughForShoppingCart(ShoppingCartDto cart) {
+        log.info("Checking shopping cart: {}", cart);
+
         double totalWeight = 0.0;
         double totalVolume = 0.0;
         boolean fragile = false;
@@ -77,11 +79,9 @@ public class WarehouseService {
                 throw new RuntimeException("Product dimensions are incomplete for product " + productId);
             }
             double volume = product.getWidth() * product.getHeight() * product.getDepth();
-
             totalVolume += volume * requestedQty;
             if (product.getFragile()) fragile = true;
         }
-
         return BookedProductsDto.builder()
                 .deliveryWeight(totalWeight)
                 .deliveryVolume(totalVolume)
