@@ -37,7 +37,7 @@ public class ProductService {
                 .description(productDto.getDescription())
                 .imageSrc(productDto.getImageSrc())
                 .quantityState(productDto.getQuantityState() != null ? productDto.getQuantityState() : QuantityState.ENOUGH)
-                .productState(productDto.getProductState() != null ? productDto.getProductState() : ProductState.ACTIVE)
+                .productState(ProductState.ACTIVE)
                 .productCategory(productDto.getProductCategory())
                 .price(productDto.getPrice())
                 .build();
