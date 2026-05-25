@@ -32,11 +32,12 @@ public class ProductService {
     @Transactional
     public ProductDto createNewProduct(ProductDto productDto) {
         ProductEntity entity = ProductEntity.builder()
+                .productId(productDto.getProductId())
                 .productName(productDto.getProductName())
                 .description(productDto.getDescription())
                 .imageSrc(productDto.getImageSrc())
                 .quantityState(productDto.getQuantityState() != null ? productDto.getQuantityState() : QuantityState.ENOUGH)
-                .productState(ProductState.DEACTIVATE)
+                .productState(productDto.getProductState() != null ? productDto.getProductState() : ProductState.ACTIVE)
                 .productCategory(productDto.getProductCategory())
                 .price(productDto.getPrice())
                 .build();
