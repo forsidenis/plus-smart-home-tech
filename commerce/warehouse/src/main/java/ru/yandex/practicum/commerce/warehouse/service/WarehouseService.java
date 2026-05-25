@@ -61,20 +61,31 @@ public class WarehouseService {
     @Transactional(readOnly = true)
     public BookedProductsDto checkProductQuantityEnoughForShoppingCart(ShoppingCartDto cart) {
         log.info("Checking shopping cart: {}", cart);
+        if (cart == null || cart.getProducts() == null || cart.getProducts().isEmpty()) {
+            log.warn("Cart or products map is empty");
+            throw new RuntimeException("Cart is empty");
+        }
 
         double totalWeight = 0.0;
         double totalVolume = 0.0;
         boolean fragile = false;
+
         for (Map.Entry<UUID, Long> entry : cart.getProducts().entrySet()) {
             UUID productId = entry.getKey();
             Long requestedQty = entry.getValue();
+
+            log.debug("Checking product ID: {}, requested quantity: {}", productId, requestedQty);
+
             WarehouseProductEntity product = warehouseRepository.findById(productId)
                     .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
-            log.debug("Checking product {}: requested {}, available {}", productId, requestedQty, product.getQuantity());
+
+            log.debug("Product {}: available quantity = {}", productId, product.getQuantity());
+
             if (product.getQuantity() < requestedQty) {
                 throw new RuntimeException("Not enough quantity for product " + productId);
             }
             totalWeight += product.getWeight() * requestedQty;
+
             if (product.getWidth() == null || product.getHeight() == null || product.getDepth() == null) {
                 throw new RuntimeException("Product dimensions are incomplete for product " + productId);
             }
@@ -82,6 +93,9 @@ public class WarehouseService {
             totalVolume += volume * requestedQty;
             if (product.getFragile()) fragile = true;
         }
+
+        log.info("Calculated: totalWeight={}, totalVolume={}, fragile={}", totalWeight, totalVolume, fragile);
+
         return BookedProductsDto.builder()
                 .deliveryWeight(totalWeight)
                 .deliveryVolume(totalVolume)

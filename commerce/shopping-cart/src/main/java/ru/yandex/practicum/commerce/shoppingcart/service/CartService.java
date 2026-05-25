@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.commerce.api.client.WarehouseClient;
+import ru.yandex.practicum.commerce.api.dto.BookedProductsDto;
 import ru.yandex.practicum.commerce.api.dto.ShoppingCartDto;
 import ru.yandex.practicum.commerce.shoppingcart.entity.CartEntity;
 import ru.yandex.practicum.commerce.shoppingcart.repository.CartRepository;
@@ -45,9 +46,10 @@ public class CartService {
         ShoppingCartDto dto = toDto(cart);
         log.info("Cart DTO before warehouse check: {}", dto);
         try {
-            warehouseClient.checkProductQuantityEnoughForShoppingCart(dto);
+            BookedProductsDto result = warehouseClient.checkProductQuantityEnoughForShoppingCart(dto);
+            log.info("Warehouse check result: {}", result);
         } catch (Exception e) {
-            log.error("Warehouse check failed", e);
+            log.error("Warehouse check failed", e);   // полный stack trace
             throw new RuntimeException("Not enough products in warehouse", e);
         }
         cartRepository.save(cart);
@@ -86,7 +88,8 @@ public class CartService {
         ShoppingCartDto dto = toDto(cart);
         log.info("Cart DTO before warehouse check: {}", dto);
         try {
-            warehouseClient.checkProductQuantityEnoughForShoppingCart(dto);
+            BookedProductsDto result = warehouseClient.checkProductQuantityEnoughForShoppingCart(dto);
+            log.info("Warehouse check result: {}", result);
         } catch (Exception e) {
             log.error("Warehouse check failed", e);
             throw new RuntimeException("Not enough products in warehouse", e);
