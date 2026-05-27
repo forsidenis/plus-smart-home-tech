@@ -9,11 +9,12 @@ import ru.yandex.practicum.commerce.api.dto.QuantityState;
 import java.util.UUID;
 
 @Entity
-@Table(name = "products")
-@Data
-@Builder
+@Table(name = "carts")
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class ProductEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

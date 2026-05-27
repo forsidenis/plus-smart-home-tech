@@ -1,5 +1,6 @@
 package ru.yandex.practicum.commerce.shoppingcart.service;
 
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -49,7 +50,7 @@ public class CartService {
         try {
             BookedProductsDto result = warehouseClient.checkProductQuantityEnoughForShoppingCart(dto);
             log.info("Warehouse check result: {}", result);
-        } catch (Exception e) {
+        } catch (FeignException e) {
             log.error("Warehouse check failed", e);
             throw new RuntimeException("Not enough products in warehouse", e);
         }
@@ -91,7 +92,7 @@ public class CartService {
         try {
             BookedProductsDto result = warehouseClient.checkProductQuantityEnoughForShoppingCart(dto);
             log.info("Warehouse check result: {}", result);
-        } catch (Exception e) {
+        } catch (FeignException e) {
             log.error("Warehouse check failed", e);
             throw new RuntimeException("Not enough products in warehouse", e);
         }

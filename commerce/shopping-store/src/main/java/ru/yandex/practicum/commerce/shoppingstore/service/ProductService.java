@@ -16,7 +16,6 @@ import java.util.UUID;
 public class ProductService {
     private final ProductRepository productRepository;
 
-    @Transactional(readOnly = true)
     public Page<ProductDto> getProducts(ProductCategory category, Pageable pageable) {
         return productRepository.findByProductCategoryAndProductState(category, ProductState.ACTIVE, pageable)
                 .map(this::toDto);

@@ -13,6 +13,10 @@ import java.security.SecureRandom;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.function.Function;
 
 @Service
 @RequiredArgsConstructor
@@ -66,18 +70,28 @@ public class WarehouseService {
             throw new RuntimeException("Cart is empty");
         }
 
+        Map<UUID, Long> requestedProducts = cart.getProducts();
+        Set<UUID> productIds = requestedProducts.keySet();
+
+        List<WarehouseProductEntity> products = warehouseRepository.findAllById(productIds);
+
+        Map<UUID, WarehouseProductEntity> productMap = products.stream()
+                .collect(Collectors.toMap(WarehouseProductEntity::getProductId, Function.identity()));
+
         double totalWeight = 0.0;
         double totalVolume = 0.0;
         boolean fragile = false;
 
-        for (Map.Entry<UUID, Long> entry : cart.getProducts().entrySet()) {
+        for (Map.Entry<UUID, Long> entry : requestedProducts.entrySet()) {
             UUID productId = entry.getKey();
             Long requestedQty = entry.getValue();
 
             log.debug("Checking product ID: {}, requested quantity: {}", productId, requestedQty);
 
-            WarehouseProductEntity product = warehouseRepository.findById(productId)
-                    .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
+            WarehouseProductEntity product = productMap.get(productId);
+            if (product == null) {
+                throw new RuntimeException("Product not found: " + productId);
+            }
 
             log.debug("Product {}: available quantity = {}", productId, product.getQuantity());
 
