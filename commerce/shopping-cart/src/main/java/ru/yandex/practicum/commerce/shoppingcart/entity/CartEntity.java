@@ -8,11 +8,10 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "carts")
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class CartEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

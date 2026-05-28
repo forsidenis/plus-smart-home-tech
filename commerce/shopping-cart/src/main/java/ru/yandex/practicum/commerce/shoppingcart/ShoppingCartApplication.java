@@ -8,7 +8,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @SpringBootApplication
 @EnableDiscoveryClient
-@EnableFeignClients(basePackages = "ru.yandex.practicum.commerce.api.client")
+@EnableFeignClients
 @ConfigurationPropertiesScan
 public class ShoppingCartApplication {
     public static void main(String[] args) {
