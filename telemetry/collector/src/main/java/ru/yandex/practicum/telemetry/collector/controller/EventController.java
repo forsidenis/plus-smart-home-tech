@@ -1,31 +1,57 @@
 package ru.yandex.practicum.telemetry.collector.controller;
 
-import jakarta.validation.Valid;
+import com.google.protobuf.Empty;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
+import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
-import ru.yandex.practicum.telemetry.collector.dto.hub.HubEventDto;
-import ru.yandex.practicum.telemetry.collector.dto.sensor.SensorEventDto;
+import net.devh.boot.grpc.server.service.GrpcService;
+import ru.yandex.practicum.grpc.telemetry.collector.CollectorControllerGrpc;
+import ru.yandex.practicum.grpc.telemetry.event.HubEventProto;
+import ru.yandex.practicum.grpc.telemetry.event.SensorEventProto;
 import ru.yandex.practicum.telemetry.collector.service.EventService;
 
 @Slf4j
-@RestController
+@GrpcService
 @RequiredArgsConstructor
-public class EventController {
+public class EventController extends CollectorControllerGrpc.CollectorControllerImplBase {
 
     private final EventService eventService;
 
-    @PostMapping("/events/sensors")
-    public void collectSensorEvent(@Valid @RequestBody SensorEventDto event) {
-        log.info("Received sensor event: {}", event);
-        eventService.processSensorEvent(event);
+    @Override
+    public void collectSensorEvent(SensorEventProto request, StreamObserver<Empty> responseObserver) {
+        try {
+            log.info("Received sensor event: {}", request);
+            eventService.processSensorEvent(request);
+            responseObserver.onNext(Empty.getDefaultInstance());
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            log.error("Error processing sensor event", e);
+            responseObserver.onError(
+                    Status.INTERNAL
+                            .withDescription(e.getLocalizedMessage())
+                            .withCause(e)
+                            .asRuntimeException()
+            );
+        }
     }
 
-    @PostMapping("/events/hubs")
-    public void collectHubEvent(@Valid @RequestBody HubEventDto event) {
-        log.info("Received hub event: {}", event);
-        eventService.processHubEvent(event);
+    @Override
+    public void collectHubEvent(HubEventProto request, StreamObserver<Empty> responseObserver) {
+        try {
+            log.info("Received hub event: {}", request);
+            eventService.processHubEvent(request);
+            responseObserver.onNext(Empty.getDefaultInstance());
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            log.error("Error processing hub event", e);
+            responseObserver.onError(
+                    Status.INTERNAL
+                            .withDescription(e.getLocalizedMessage())
+                            .withCause(e)
+                            .asRuntimeException()
+            );
+        }
     }
 }
