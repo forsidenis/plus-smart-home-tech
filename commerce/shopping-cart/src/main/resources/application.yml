@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: shopping-cart
+  config:
+    import: "configserver:"
+  cloud:
+    config:
+      discovery:
+        enabled: true
+        serviceId: config-server
+      fail-fast: true
+      retry:
+        useRandomPolicy: true
+        max-interval: 6000
+    openfeign:
+      circuitbreaker:
+        enabled: true
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    preferIpAddress: true
+
+# Настройки Circuit Breaker (Resilience4j)
+resilience4j:
+  circuitbreaker:
+    instances:
+      WarehouseClientcheckProductQuantityEnoughForShoppingCart:
+        minimumNumberOfCalls: 5
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000

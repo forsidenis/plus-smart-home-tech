@@ -1,15 +1,21 @@
 spring:
-  kafka:
-    bootstrap-servers: localhost:9092
+  application:
+    name: collector
+  config:
+    import: "configserver:"
+  cloud:
+    config:
+      discovery:
+        enabled: true
+        serviceId: config-server
+      fail-fast: true
+      retry:
+        useRandomPolicy: true
+        max-interval: 6000
 
-collector:
-  kafka:
-    topics:
-      sensors: telemetry.sensors.v1
-      hubs: telemetry.hubs.v1
-
-logging:
-  level:
-    ru.yandex.practicum.telemetry.collector: DEBUG
-    org.springframework.kafka: DEBUG
-    org.apache.kafka: WARN
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    preferIpAddress: true
