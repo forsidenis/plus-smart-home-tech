@@ -16,15 +16,14 @@ import java.util.UUID;
 public class ProductService {
     private final ProductRepository productRepository;
 
-    @Transactional(readOnly = true)
     public Page<ProductDto> getProducts(ProductCategory category, Pageable pageable) {
-        return productRepository.findByProductCategoryAndProductState(category, ProductState.ACTIVE, pageable)
+        return productRepository.findByProductCategory(category, pageable)
                 .map(this::toDto);
     }
 
     @Transactional(readOnly = true)
     public ProductDto getProduct(UUID productId) {
-        ProductEntity entity = productRepository.findByProductIdAndProductState(productId, ProductState.ACTIVE)
+        ProductEntity entity = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
         return toDto(entity);
     }
@@ -32,11 +31,12 @@ public class ProductService {
     @Transactional
     public ProductDto createNewProduct(ProductDto productDto) {
         ProductEntity entity = ProductEntity.builder()
+                .productId(productDto.getProductId())
                 .productName(productDto.getProductName())
                 .description(productDto.getDescription())
                 .imageSrc(productDto.getImageSrc())
                 .quantityState(productDto.getQuantityState() != null ? productDto.getQuantityState() : QuantityState.ENOUGH)
-                .productState(ProductState.ACTIVE)
+                .productState(productDto.getProductState())
                 .productCategory(productDto.getProductCategory())
                 .price(productDto.getPrice())
                 .build();
