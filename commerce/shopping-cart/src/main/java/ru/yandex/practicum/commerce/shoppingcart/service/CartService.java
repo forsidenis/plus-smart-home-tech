@@ -1,12 +1,10 @@
 package ru.yandex.practicum.commerce.shoppingcart.service;
 
-import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.commerce.api.client.WarehouseClient;
-import ru.yandex.practicum.commerce.api.dto.BookedProductsDto;
 import ru.yandex.practicum.commerce.api.dto.ShoppingCartDto;
 import ru.yandex.practicum.commerce.shoppingcart.entity.CartEntity;
 import ru.yandex.practicum.commerce.shoppingcart.repository.CartRepository;
@@ -45,13 +43,10 @@ public class CartService {
         }
         // проверяем наличие на складе
         ShoppingCartDto dto = toDto(cart);
-        log.info("Cart DTO before warehouse check: {}", dto);
-        log.info("Warehouse client class: {}", warehouseClient.getClass().getName());
         try {
-            BookedProductsDto result = warehouseClient.checkProductQuantityEnoughForShoppingCart(dto);
-            log.info("Warehouse check result: {}", result);
-        } catch (FeignException e) {
-            log.error("Warehouse check failed", e);
+            warehouseClient.checkProductQuantityEnoughForShoppingCart(dto);
+        } catch (Exception e) {
+            log.error("Warehouse check failed: {}", e.getMessage());
             throw new RuntimeException("Not enough products in warehouse", e);
         }
         cartRepository.save(cart);
@@ -86,14 +81,11 @@ public class CartService {
             throw new RuntimeException("Product not in cart");
         }
         products.put(productId, newQuantity);
-
+        // перепроверяем склад
         ShoppingCartDto dto = toDto(cart);
-        log.info("Cart DTO before warehouse check: {}", dto);
         try {
-            BookedProductsDto result = warehouseClient.checkProductQuantityEnoughForShoppingCart(dto);
-            log.info("Warehouse check result: {}", result);
-        } catch (FeignException e) {
-            log.error("Warehouse check failed", e);
+            warehouseClient.checkProductQuantityEnoughForShoppingCart(dto);
+        } catch (Exception e) {
             throw new RuntimeException("Not enough products in warehouse", e);
         }
         cartRepository.save(cart);

@@ -13,10 +13,6 @@ import java.security.SecureRandom;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.function.Function;
 
 @Service
 @RequiredArgsConstructor
@@ -64,52 +60,22 @@ public class WarehouseService {
 
     @Transactional(readOnly = true)
     public BookedProductsDto checkProductQuantityEnoughForShoppingCart(ShoppingCartDto cart) {
-        log.info("Checking shopping cart: {}", cart);
-        if (cart == null || cart.getProducts() == null || cart.getProducts().isEmpty()) {
-            log.warn("Cart or products map is empty");
-            throw new RuntimeException("Cart is empty");
-        }
-
-        Map<UUID, Long> requestedProducts = cart.getProducts();
-        Set<UUID> productIds = requestedProducts.keySet();
-
-        List<WarehouseProductEntity> products = warehouseRepository.findAllById(productIds);
-
-        Map<UUID, WarehouseProductEntity> productMap = products.stream()
-                .collect(Collectors.toMap(WarehouseProductEntity::getProductId, Function.identity()));
-
         double totalWeight = 0.0;
         double totalVolume = 0.0;
         boolean fragile = false;
-
-        for (Map.Entry<UUID, Long> entry : requestedProducts.entrySet()) {
+        for (Map.Entry<UUID, Long> entry : cart.getProducts().entrySet()) {
             UUID productId = entry.getKey();
             Long requestedQty = entry.getValue();
-
-            log.debug("Checking product ID: {}, requested quantity: {}", productId, requestedQty);
-
-            WarehouseProductEntity product = productMap.get(productId);
-            if (product == null) {
-                throw new RuntimeException("Product not found: " + productId);
-            }
-
-            log.debug("Product {}: available quantity = {}", productId, product.getQuantity());
-
+            WarehouseProductEntity product = warehouseRepository.findById(productId)
+                    .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
             if (product.getQuantity() < requestedQty) {
                 throw new RuntimeException("Not enough quantity for product " + productId);
             }
             totalWeight += product.getWeight() * requestedQty;
-
-            if (product.getWidth() == null || product.getHeight() == null || product.getDepth() == null) {
-                throw new RuntimeException("Product dimensions are incomplete for product " + productId);
-            }
             double volume = product.getWidth() * product.getHeight() * product.getDepth();
             totalVolume += volume * requestedQty;
             if (product.getFragile()) fragile = true;
         }
-
-        log.info("Calculated: totalWeight={}, totalVolume={}, fragile={}", totalWeight, totalVolume, fragile);
-
         return BookedProductsDto.builder()
                 .deliveryWeight(totalWeight)
                 .deliveryVolume(totalVolume)

@@ -3,17 +3,19 @@ package ru.yandex.practicum.commerce.warehouse.entity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
 @Entity
-@Table(name = "carts")
-@Getter
-@Setter
+@Table(name = "warehouse_products")
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class WarehouseProductEntity {
     @Id
     private UUID productId;
