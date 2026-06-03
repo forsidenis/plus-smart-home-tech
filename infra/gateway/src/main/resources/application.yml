@@ -1,0 +1,50 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: shopping-store
+          uri: lb://shopping-store
+          predicates:
+            - Path=/api/v1/shopping-store/**
+        - id: shopping-cart
+          uri: lb://shopping-cart
+          predicates:
+            - Path=/api/v1/shopping-cart/**
+        - id: warehouse
+          uri: lb://warehouse
+          predicates:
+            - Path=/api/v1/warehouse/**
+        - id: order
+          uri: lb://order
+          predicates:
+            - Path=/api/v1/order/**
+        - id: payment
+          uri: lb://payment
+          predicates:
+            - Path=/api/v1/payment/**
+        - id: delivery
+          uri: lb://delivery
+          predicates:
+            - Path=/api/v1/delivery/**
+    config:
+      enabled: false
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    preferIpAddress: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG

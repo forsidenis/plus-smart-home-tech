@@ -6,7 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.commerce.api.dto.*;
+import ru.yandex.practicum.commerce.warehouse.entity.OrderBookingEntity;
 import ru.yandex.practicum.commerce.warehouse.entity.WarehouseProductEntity;
+import ru.yandex.practicum.commerce.warehouse.repository.OrderBookingRepository;
 import ru.yandex.practicum.commerce.warehouse.repository.WarehouseRepository;
 
 import java.security.SecureRandom;
@@ -23,6 +25,7 @@ import java.util.function.Function;
 @Slf4j
 public class WarehouseService {
     private final WarehouseRepository warehouseRepository;
+    private final OrderBookingRepository orderBookingRepository;
 
     private static final String[] ADDRESSES = new String[]{"ADDRESS_1", "ADDRESS_2"};
     private static final String CURRENT_ADDRESS = ADDRESSES[new Random(new SecureRandom().nextLong()).nextInt(ADDRESSES.length)];
@@ -31,6 +34,75 @@ public class WarehouseService {
     private static final String STREET = "Tverskaya";
     private static final String HOUSE = "1";
     private static final String FLAT = "1";
+
+    // Метод сборки товаров для заказа
+    @Transactional
+    public BookedProductsDto assemblyProductsForOrder(AssemblyProductsForOrderRequest request) {
+        UUID orderId = request.getOrderId();
+        Map<UUID, Long> products = request.getProducts();
+
+        // 1. Проверить наличие и достаточность (аналогично checkProductQuantityEnoughForShoppingCart)
+        Map<UUID, WarehouseProductEntity> warehouseMap = warehouseRepository.findAllById(products.keySet())
+                .stream().collect(Collectors.toMap(WarehouseProductEntity::getProductId, Function.identity()));
+
+        double totalWeight = 0.0;
+        double totalVolume = 0.0;
+        boolean fragile = false;
+
+        for (Map.Entry<UUID, Long> entry : products.entrySet()) {
+            UUID productId = entry.getKey();
+            Long requestedQty = entry.getValue();
+            WarehouseProductEntity product = warehouseMap.get(productId);
+            if (product == null) {
+                throw new RuntimeException("Product not found in warehouse: " + productId);
+            }
+            if (product.getQuantity() < requestedQty) {
+                throw new RuntimeException("Not enough quantity for product " + productId);
+            }
+            // Уменьшаем остаток на складе
+            product.setQuantity(product.getQuantity() - requestedQty);
+            warehouseRepository.save(product);
+
+            totalWeight += product.getWeight() * requestedQty;
+            double volume = product.getWidth() * product.getHeight() * product.getDepth();
+            totalVolume += volume * requestedQty;
+            if (product.getFragile()) fragile = true;
+        }
+
+        // 2. Сохранить бронирование
+        OrderBookingEntity booking = OrderBookingEntity.builder()
+                .orderId(orderId)
+                .products(products)
+                .build();
+        orderBookingRepository.save(booking);
+
+        // 3. Вернуть информацию
+        return BookedProductsDto.builder()
+                .deliveryWeight(totalWeight)
+                .deliveryVolume(totalVolume)
+                .fragile(fragile)
+                .build();
+    }
+
+    // Передача товаров в доставку
+    @Transactional
+    public void shippedToDelivery(ShippedToDeliveryRequest request) {
+        OrderBookingEntity booking = orderBookingRepository.findByOrderId(request.getOrderId())
+                .orElseThrow(() -> new RuntimeException("No booking found for order " + request.getOrderId()));
+        booking.setDeliveryId(request.getDeliveryId());
+        orderBookingRepository.save(booking);
+    }
+
+    // Возврат товаров на склад
+    @Transactional
+    public void acceptReturn(Map<UUID, Long> products) {
+        for (Map.Entry<UUID, Long> entry : products.entrySet()) {
+            WarehouseProductEntity product = warehouseRepository.findById(entry.getKey())
+                    .orElseThrow(() -> new RuntimeException("Product not found: " + entry.getKey()));
+            product.setQuantity(product.getQuantity() + entry.getValue());
+            warehouseRepository.save(product);
+        }
+    }
 
     @PostConstruct
     public void init() {
@@ -119,11 +191,11 @@ public class WarehouseService {
 
     public AddressDto getWarehouseAddress() {
         return AddressDto.builder()
-                .country(CURRENT_ADDRESS)
-                .city(CURRENT_ADDRESS)
-                .street(CURRENT_ADDRESS)
-                .house(CURRENT_ADDRESS)
-                .flat(CURRENT_ADDRESS)
+                .country(COUNTRY)
+                .city(CITY)
+                .street(STREET)
+                .house(HOUSE)
+                .flat(FLAT)
                 .build();
     }
 }
