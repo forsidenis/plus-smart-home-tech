@@ -21,6 +21,7 @@ public class CartEntity {
     @Column(unique = true)
     private String username;
 
+    @Builder.Default
     private boolean active = true;
 
     @ElementCollection(fetch = FetchType.EAGER)

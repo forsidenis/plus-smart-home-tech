@@ -66,6 +66,9 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>ru.yandex.practicum.commerce.order.OrderApplication</mainClass>
+                </configuration>
             </plugin>
         </plugins>
     </build>
