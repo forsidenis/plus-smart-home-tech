@@ -11,111 +11,170 @@ import ru.yandex.practicum.commerce.delivery.entity.AddressEntity;
 import ru.yandex.practicum.commerce.delivery.entity.DeliveryEntity;
 import ru.yandex.practicum.commerce.delivery.repository.DeliveryRepository;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class DeliveryService {
+
     private final DeliveryRepository deliveryRepository;
     private final WarehouseClient warehouseClient;
     private final OrderClient orderClient;
 
-    private static final double BASE_COST = 5.0;
+    // Константы для расчёта стоимости доставки
+    private static final BigDecimal BASE_COST = BigDecimal.valueOf(5.0);
     private static final String WAREHOUSE_ADDRESS_1 = "ADDRESS_1";
     private static final String WAREHOUSE_ADDRESS_2 = "ADDRESS_2";
+    private static final BigDecimal ADDRESS_FACTOR_1 = BigDecimal.ONE;
+    private static final BigDecimal ADDRESS_FACTOR_2 = BigDecimal.valueOf(2);
+    private static final BigDecimal FRAGILE_FACTOR = BigDecimal.valueOf(0.2);
+    private static final BigDecimal WEIGHT_FACTOR = BigDecimal.valueOf(0.3);
+    private static final BigDecimal VOLUME_FACTOR = BigDecimal.valueOf(0.2);
+    private static final BigDecimal STREET_MISMATCH_FACTOR = BigDecimal.valueOf(0.2);
 
     /**
-     * Расчёт стоимости доставки согласно алгоритму ТЗ.
+     * Расчёт стоимости доставки.
+     * Логирование каждого этапа для отладки.
      */
-    public double calculateDeliveryCost(OrderDto order) {
-        // Получаем адрес склада из Warehouse
-        AddressDto warehouseAddress = warehouseClient.getWarehouseAddress();
-        AddressDto customerAddress = order.getDeliveryAddress();
-        if (customerAddress == null) {
+    public BigDecimal calculateDeliveryCost(OrderDto order) {
+        log.info("Начало расчёта стоимости доставки для заказа: {}", order.getOrderId());
+
+        AddressDto warehouseAddr = warehouseClient.getWarehouseAddress();
+        AddressDto customerAddr = order.getDeliveryAddress();
+
+        if (customerAddr == null) {
+            log.error("Адрес доставки отсутствует для заказа: {}", order.getOrderId());
             throw new RuntimeException("Delivery address is missing in order");
         }
 
-        double cost = BASE_COST;
+        log.debug("Адрес склада: {}", warehouseAddr);
+        log.debug("Адрес клиента: {}", customerAddr);
 
-        // 1. Коэффициент склада
-        String warehouseStreet = warehouseAddress.getStreet();
+        BigDecimal cost = BASE_COST;
+        log.info("Базовая стоимость: {}", cost);
+
+        // 1. Учёт адреса склада
+        String warehouseStreet = warehouseAddr.getStreet();
         if (WAREHOUSE_ADDRESS_1.equals(warehouseStreet)) {
-            cost = cost * 1 + BASE_COST;
+            cost = cost.multiply(ADDRESS_FACTOR_1).add(BASE_COST);
+            log.debug("Коэффициент склада ADDRESS_1: новое значение = {}", cost);
         } else if (WAREHOUSE_ADDRESS_2.equals(warehouseStreet)) {
-            cost = cost * 2 + BASE_COST;
+            cost = cost.multiply(ADDRESS_FACTOR_2).add(BASE_COST);
+            log.debug("Коэффициент склада ADDRESS_2: новое значение = {}", cost);
         } else {
-            cost = cost * 1 + BASE_COST; // по умолчанию
+            cost = cost.multiply(ADDRESS_FACTOR_1).add(BASE_COST);
+            log.debug("Склад по умолчанию: новое значение = {}", cost);
         }
 
         // 2. Хрупкость
-        if (order.getFragile() != null && order.getFragile()) {
-            cost += cost * 0.2;
+        if (Boolean.TRUE.equals(order.getFragile())) {
+            BigDecimal fragileAddition = cost.multiply(FRAGILE_FACTOR);
+            cost = cost.add(fragileAddition);
+            log.debug("Добавка за хрупкость: {}, итого = {}", fragileAddition, cost);
         }
 
         // 3. Вес
-        Double weight = order.getDeliveryWeight();
-        if (weight != null) {
-            cost += weight * 0.3;
-        }
+        double weight = order.getDeliveryWeight() != null ? order.getDeliveryWeight() : 0.0;
+        BigDecimal weightAddition = BigDecimal.valueOf(weight).multiply(WEIGHT_FACTOR);
+        cost = cost.add(weightAddition);
+        log.debug("Добавка за вес ({}) = {}, итого = {}", weight, weightAddition, cost);
 
         // 4. Объём
-        Double volume = order.getDeliveryVolume();
-        if (volume != null) {
-            cost += volume * 0.2;
-        }
+        double volume = order.getDeliveryVolume() != null ? order.getDeliveryVolume() : 0.0;
+        BigDecimal volumeAddition = BigDecimal.valueOf(volume).multiply(VOLUME_FACTOR);
+        cost = cost.add(volumeAddition);
+        log.debug("Добавка за объём ({}) = {}, итого = {}", volume, volumeAddition, cost);
 
         // 5. Совпадение улицы
-        if (!customerAddress.getStreet().equals(warehouseStreet)) {
-            cost += cost * 0.2;
+        if (!customerAddr.getStreet().equals(warehouseAddr.getStreet())) {
+            BigDecimal mismatchAddition = cost.multiply(STREET_MISMATCH_FACTOR);
+            cost = cost.add(mismatchAddition);
+            log.debug("Добавка за несовпадение улицы: {}, итого = {}", mismatchAddition, cost);
+        } else {
+            log.debug("Улицы совпадают, добавки нет");
         }
 
+        // Округление до 2 знаков (стандарт для денег)
+        cost = cost.setScale(2, RoundingMode.HALF_UP);
+        log.info("Финальная стоимость доставки для заказа {} = {}", order.getOrderId(), cost);
         return cost;
     }
 
     /**
-     * Создание новой доставки (планирование).
+     * Создание новой доставки.
      */
     @Transactional
     public DeliveryDto planDelivery(DeliveryDto deliveryDto) {
-        // Конвертируем AddressDto в AddressEntity
-        AddressEntity fromAddress = toAddressEntity(deliveryDto.getFromAddress());
-        AddressEntity toAddress = toAddressEntity(deliveryDto.getToAddress());
+        log.info("Планирование доставки для заказа: {}", deliveryDto.getOrderId());
+
+        AddressEntity from = AddressEntity.builder()
+                .country(deliveryDto.getFromAddress().getCountry())
+                .city(deliveryDto.getFromAddress().getCity())
+                .street(deliveryDto.getFromAddress().getStreet())
+                .house(deliveryDto.getFromAddress().getHouse())
+                .flat(deliveryDto.getFromAddress().getFlat())
+                .build();
+
+        AddressEntity to = AddressEntity.builder()
+                .country(deliveryDto.getToAddress().getCountry())
+                .city(deliveryDto.getToAddress().getCity())
+                .street(deliveryDto.getToAddress().getStreet())
+                .house(deliveryDto.getToAddress().getHouse())
+                .flat(deliveryDto.getToAddress().getFlat())
+                .build();
 
         DeliveryEntity entity = DeliveryEntity.builder()
                 .deliveryId(UUID.randomUUID())
                 .orderId(deliveryDto.getOrderId())
-                .fromAddress(fromAddress)
-                .toAddress(toAddress)
+                .fromAddress(from)
+                .toAddress(to)
                 .deliveryState(DeliveryState.CREATED)
                 .build();
-        entity = deliveryRepository.save(entity);
 
-        return toDeliveryDto(entity);
+        entity = deliveryRepository.save(entity);
+        log.info("Доставка создана с ID: {} для заказа: {}", entity.getDeliveryId(), entity.getOrderId());
+
+        return DeliveryDto.builder()
+                .deliveryId(entity.getDeliveryId())
+                .orderId(entity.getOrderId())
+                .fromAddress(deliveryDto.getFromAddress())
+                .toAddress(deliveryDto.getToAddress())
+                .deliveryState(entity.getDeliveryState())
+                .build();
     }
 
     /**
-     * Приём товаров в доставку (статус IN_PROGRESS).
-     * Вызывается, когда служба доставки получила заказ-наряд.
+     * Эмуляция получения товара в доставку.
      */
     @Transactional
     public void pickDelivery(UUID orderId) {
+        log.info("Отметка о получении товара в доставку для заказа: {}", orderId);
+
         DeliveryEntity delivery = deliveryRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new RuntimeException("Delivery not found for order: " + orderId));
+                .orElseThrow(() -> {
+                    log.error("Доставка не найдена для заказа: {}", orderId);
+                    return new RuntimeException("Delivery not found for order " + orderId);
+                });
 
         if (delivery.getDeliveryState() != DeliveryState.CREATED) {
-            throw new RuntimeException("Delivery is not in CREATED state");
+            log.warn("Доставка {} уже в процессе или завершена, текущий статус: {}", delivery.getDeliveryId(), delivery.getDeliveryState());
+            throw new RuntimeException("Delivery already in progress or finished");
         }
 
         delivery.setDeliveryState(DeliveryState.IN_PROGRESS);
         deliveryRepository.save(delivery);
 
-        // Уведомляем Warehouse, что товары переданы в доставку
+        // Уведомляем склад
         ShippedToDeliveryRequest request = ShippedToDeliveryRequest.builder()
                 .orderId(orderId)
                 .deliveryId(delivery.getDeliveryId())
                 .build();
         warehouseClient.shippedToDelivery(request);
+
+        log.info("Доставка {} переведена в статус IN_PROGRESS для заказа {}", delivery.getDeliveryId(), orderId);
     }
 
     /**
@@ -123,65 +182,40 @@ public class DeliveryService {
      */
     @Transactional
     public void successfulDelivery(UUID orderId) {
-        DeliveryEntity delivery = deliveryRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new RuntimeException("Delivery not found for order: " + orderId));
+        log.info("Успешная доставка заказа: {}", orderId);
 
-        if (delivery.getDeliveryState() != DeliveryState.IN_PROGRESS) {
-            throw new RuntimeException("Delivery is not in IN_PROGRESS state");
-        }
+        DeliveryEntity delivery = deliveryRepository.findByOrderId(orderId)
+                .orElseThrow(() -> {
+                    log.error("Доставка не найдена для заказа: {}", orderId);
+                    return new RuntimeException("Delivery not found for order " + orderId);
+                });
 
         delivery.setDeliveryState(DeliveryState.DELIVERED);
         deliveryRepository.save(delivery);
 
-        // Уведомляем Order об успешной доставке
         orderClient.delivery(orderId, delivery.getDeliveryId());
+
+        log.info("Доставка {} завершена успешно для заказа {}", delivery.getDeliveryId(), orderId);
     }
 
     /**
-     * Неудачная доставка.
+     * Ошибка доставки.
      */
     @Transactional
     public void failedDelivery(UUID orderId) {
+        log.error("Ошибка доставки для заказа: {}", orderId);
+
         DeliveryEntity delivery = deliveryRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new RuntimeException("Delivery not found for order: " + orderId));
+                .orElseThrow(() -> {
+                    log.error("Доставка не найдена для заказа: {}", orderId);
+                    return new RuntimeException("Delivery not found for order " + orderId);
+                });
 
         delivery.setDeliveryState(DeliveryState.FAILED);
         deliveryRepository.save(delivery);
 
-        // Уведомляем Order об ошибке доставки
         orderClient.deliveryFailed(orderId);
-    }
 
-    // Вспомогательные методы конвертации
-    private AddressEntity toAddressEntity(AddressDto dto) {
-        if (dto == null) return null;
-        return AddressEntity.builder()
-                .country(dto.getCountry())
-                .city(dto.getCity())
-                .street(dto.getStreet())
-                .house(dto.getHouse())
-                .flat(dto.getFlat())
-                .build();
-    }
-
-    private AddressDto toAddressDto(AddressEntity entity) {
-        if (entity == null) return null;
-        return AddressDto.builder()
-                .country(entity.getCountry())
-                .city(entity.getCity())
-                .street(entity.getStreet())
-                .house(entity.getHouse())
-                .flat(entity.getFlat())
-                .build();
-    }
-
-    private DeliveryDto toDeliveryDto(DeliveryEntity entity) {
-        return DeliveryDto.builder()
-                .deliveryId(entity.getDeliveryId())
-                .orderId(entity.getOrderId())
-                .fromAddress(toAddressDto(entity.getFromAddress()))
-                .toAddress(toAddressDto(entity.getToAddress()))
-                .deliveryState(entity.getDeliveryState())
-                .build();
+        log.info("Доставка {} отмечена как FAILED для заказа {}", delivery.getDeliveryId(), orderId);
     }
 }

@@ -9,6 +9,7 @@ import ru.yandex.practicum.commerce.api.dto.*;
 import ru.yandex.practicum.commerce.order.entity.OrderEntity;
 import ru.yandex.practicum.commerce.order.repository.OrderRepository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -134,16 +135,12 @@ public class OrderService {
     public OrderDto calculateTotalCost(UUID orderId) {
         OrderEntity order = getOrderOrThrow(orderId);
         OrderDto orderDto = toDto(order);
-        // получаем стоимость товаров
         Double productCost = paymentClient.productCost(orderDto);
-        // получаем общую стоимость (товары + налог)
         Double totalWithTax = paymentClient.getTotalCost(orderDto);
-        // получаем стоимость доставки
-        Double deliveryCost = deliveryClient.deliveryCost(orderDto);
-
+        BigDecimal deliveryCost = deliveryClient.deliveryCost(orderDto);
         orderDto.setProductPrice(productCost);
-        orderDto.setDeliveryPrice(deliveryCost);
-        orderDto.setTotalPrice(totalWithTax + deliveryCost); // общая с доставкой
+        orderDto.setDeliveryPrice(deliveryCost.doubleValue());
+        orderDto.setTotalPrice(totalWithTax + deliveryCost.doubleValue());
         return orderDto;
     }
 
@@ -151,8 +148,8 @@ public class OrderService {
     public OrderDto calculateDeliveryCost(UUID orderId) {
         OrderEntity order = getOrderOrThrow(orderId);
         OrderDto orderDto = toDto(order);
-        Double deliveryCost = deliveryClient.deliveryCost(orderDto);
-        orderDto.setDeliveryPrice(deliveryCost);
+        BigDecimal deliveryCost = deliveryClient.deliveryCost(orderDto);
+        orderDto.setDeliveryPrice(deliveryCost.doubleValue());
         return orderDto;
     }
 
